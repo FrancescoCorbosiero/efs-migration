@@ -1,6 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import config from './config.js';
 import { importProduct } from './shopify/importer.js';
+
+config.validateShopify();
 
 const filePath = resolve(process.argv[2] || 'samples/sample-product.json');
 
