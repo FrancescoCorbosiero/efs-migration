@@ -1,0 +1,57 @@
+{
+  "title": "Apex Performance Hoodie",
+  "slug": "apex-performance-hoodie",
+  "description_html": "<p>The <strong>Apex Performance Hoodie</strong> is engineered for athletes who demand premium comfort and durability. Made from a proprietary blend of organic cotton and recycled polyester, this hoodie features moisture-wicking technology, reinforced seams, and a tailored silhouette that moves with you.</p><ul><li>Organic cotton / recycled polyester blend (280 GSM)</li><li>YKK zippers on kangaroo pocket</li><li>Ribbed cuffs and hem for snug fit</li><li>Internal media pocket with cord routing</li></ul>",
+  "short_description": "Premium performance hoodie in organic cotton blend with moisture-wicking tech.",
+  "vendor": "Apex Athletics",
+  "product_type": "Hoodies",
+  "tags": ["hoodie", "performance", "organic", "unisex", "athleisure", "moisture-wicking", "sustainable"],
+  "status": "active",
+  "seo": {
+    "title": "Apex Performance Hoodie — Premium Organic Athleisure | Apex Athletics",
+    "description": "Shop the Apex Performance Hoodie. Organic cotton & recycled polyester blend, moisture-wicking, reinforced seams. Available in 4 colors, 5 sizes, and 2 fits."
+  },
+  "images": [
+    { "src": "https://cdn.example.com/apex-hoodie-black-front.jpg", "alt": "Apex Performance Hoodie in Black — front view" },
+    { "src": "https://cdn.example.com/apex-hoodie-navy-front.jpg", "alt": "Apex Performance Hoodie in Navy — front view" },
+    { "src": "https://cdn.example.com/apex-hoodie-heather-grey-front.jpg", "alt": "Apex Performance Hoodie in Heather Grey — front view" },
+    { "src": "https://cdn.example.com/apex-hoodie-forest-green-front.jpg", "alt": "Apex Performance Hoodie in Forest Green — front view" },
+    { "src": "https://cdn.example.com/apex-hoodie-detail-zipper.jpg", "alt": "Apex Performance Hoodie — zipper pocket detail" },
+    { "src": "https://cdn.example.com/apex-hoodie-detail-label.jpg", "alt": "Apex Performance Hoodie — interior label detail" }
+  ],
+  "options": [
+    { "name": "Color", "values": ["Black", "Navy", "Heather Grey", "Forest Green"] },
+    { "name": "Size", "values": ["XS", "S", "M", "L", "XL"] },
+    { "name": "Fit", "values": ["Regular", "Relaxed"] }
+  ],
+  "variants": [
+    { "sku": "APX-HDY-BLK-XS-REG", "barcode": "860012345001", "price": "89.00", "compare_at_price": "110.00", "weight": 0.52, "weight_unit": "kg", "inventory_quantity": 35, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Black", "Size": "XS", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-black-front.jpg" },
+    { "sku": "APX-HDY-BLK-S-REG", "barcode": "860012345002", "price": "89.00", "compare_at_price": "110.00", "weight": 0.54, "weight_unit": "kg", "inventory_quantity": 60, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Black", "Size": "S", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-black-front.jpg" },
+    { "sku": "APX-HDY-BLK-M-REG", "barcode": "860012345003", "price": "89.00", "compare_at_price": "110.00", "weight": 0.56, "weight_unit": "kg", "inventory_quantity": 80, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Black", "Size": "M", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-black-front.jpg" },
+    { "sku": "APX-HDY-BLK-L-REG", "barcode": "860012345004", "price": "89.00", "compare_at_price": "110.00", "weight": 0.58, "weight_unit": "kg", "inventory_quantity": 70, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Black", "Size": "L", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-black-front.jpg" },
+    { "sku": "APX-HDY-BLK-XL-REG", "barcode": "860012345005", "price": "89.00", "compare_at_price": "110.00", "weight": 0.60, "weight_unit": "kg", "inventory_quantity": 45, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Black", "Size": "XL", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-black-front.jpg" },
+    { "sku": "APX-HDY-BLK-XS-RLX", "barcode": "860012345006", "price": "89.00", "compare_at_price": "110.00", "weight": 0.54, "weight_unit": "kg", "inventory_quantity": 20, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Black", "Size": "XS", "Fit": "Relaxed" }, "image_src": "https://cdn.example.com/apex-hoodie-black-front.jpg" },
+    { "sku": "APX-HDY-BLK-S-RLX", "barcode": "860012345007", "price": "89.00", "compare_at_price": "110.00", "weight": 0.56, "weight_unit": "kg", "inventory_quantity": 40, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Black", "Size": "S", "Fit": "Relaxed" }, "image_src": "https://cdn.example.com/apex-hoodie-black-front.jpg" },
+    { "sku": "APX-HDY-BLK-M-RLX", "barcode": "860012345008", "price": "89.00", "compare_at_price": "110.00", "weight": 0.58, "weight_unit": "kg", "inventory_quantity": 55, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Black", "Size": "M", "Fit": "Relaxed" }, "image_src": "https://cdn.example.com/apex-hoodie-black-front.jpg" },
+    { "sku": "APX-HDY-NAV-S-REG", "barcode": "860012345020", "price": "89.00", "compare_at_price": "110.00", "weight": 0.54, "weight_unit": "kg", "inventory_quantity": 50, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Navy", "Size": "S", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-navy-front.jpg" },
+    { "sku": "APX-HDY-NAV-M-REG", "barcode": "860012345021", "price": "89.00", "compare_at_price": "110.00", "weight": 0.56, "weight_unit": "kg", "inventory_quantity": 65, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Navy", "Size": "M", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-navy-front.jpg" },
+    { "sku": "APX-HDY-NAV-L-REG", "barcode": "860012345022", "price": "89.00", "compare_at_price": "110.00", "weight": 0.58, "weight_unit": "kg", "inventory_quantity": 55, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Navy", "Size": "L", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-navy-front.jpg" },
+    { "sku": "APX-HDY-NAV-XL-REG", "barcode": "860012345023", "price": "89.00", "compare_at_price": "110.00", "weight": 0.60, "weight_unit": "kg", "inventory_quantity": 30, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Navy", "Size": "XL", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-navy-front.jpg" },
+    { "sku": "APX-HDY-GRY-M-REG", "barcode": "860012345040", "price": "89.00", "compare_at_price": "110.00", "weight": 0.56, "weight_unit": "kg", "inventory_quantity": 75, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Heather Grey", "Size": "M", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-heather-grey-front.jpg" },
+    { "sku": "APX-HDY-GRY-L-REG", "barcode": "860012345041", "price": "89.00", "compare_at_price": "110.00", "weight": 0.58, "weight_unit": "kg", "inventory_quantity": 60, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Heather Grey", "Size": "L", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-heather-grey-front.jpg" },
+    { "sku": "APX-HDY-GRY-M-RLX", "barcode": "860012345042", "price": "89.00", "compare_at_price": "110.00", "weight": 0.58, "weight_unit": "kg", "inventory_quantity": 40, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Heather Grey", "Size": "M", "Fit": "Relaxed" }, "image_src": "https://cdn.example.com/apex-hoodie-heather-grey-front.jpg" },
+    { "sku": "APX-HDY-FGR-S-REG", "barcode": "860012345060", "price": "89.00", "compare_at_price": "110.00", "weight": 0.54, "weight_unit": "kg", "inventory_quantity": 30, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Forest Green", "Size": "S", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-forest-green-front.jpg" },
+    { "sku": "APX-HDY-FGR-M-REG", "barcode": "860012345061", "price": "89.00", "compare_at_price": "110.00", "weight": 0.56, "weight_unit": "kg", "inventory_quantity": 50, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Forest Green", "Size": "M", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-forest-green-front.jpg" },
+    { "sku": "APX-HDY-FGR-L-REG", "barcode": "860012345062", "price": "89.00", "compare_at_price": "110.00", "weight": 0.58, "weight_unit": "kg", "inventory_quantity": 45, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Forest Green", "Size": "L", "Fit": "Regular" }, "image_src": "https://cdn.example.com/apex-hoodie-forest-green-front.jpg" },
+    { "sku": "APX-HDY-FGR-L-RLX", "barcode": "860012345063", "price": "89.00", "compare_at_price": "110.00", "weight": 0.60, "weight_unit": "kg", "inventory_quantity": 25, "inventory_policy": "deny", "inventory_management": "shopify", "option_values": { "Color": "Forest Green", "Size": "L", "Fit": "Relaxed" }, "image_src": "https://cdn.example.com/apex-hoodie-forest-green-front.jpg" }
+  ],
+  "metafields": [
+    { "namespace": "product", "key": "fabric_composition", "value": "60% organic cotton, 40% recycled polyester", "type": "single_line_text_field" },
+    { "namespace": "product", "key": "care_instructions", "value": "Machine wash cold with like colors.\nTumble dry low.\nDo not bleach.\nDo not iron directly on print.", "type": "multi_line_text_field" },
+    { "namespace": "product", "key": "weight_gsm", "value": "280", "type": "number_integer" },
+    { "namespace": "product", "key": "is_sustainable", "value": "true", "type": "boolean" },
+    { "namespace": "custom", "key": "features", "value": "{\"moisture_wicking\":true,\"reinforced_seams\":true,\"media_pocket\":true,\"ykk_zippers\":true,\"ribbed_cuffs\":true}", "type": "json" },
+    { "namespace": "custom", "key": "country_of_origin", "value": "Portugal", "type": "single_line_text_field" }
+  ],
+  "collections": ["Hoodies", "New Arrivals", "Sustainable Collection"]
+}

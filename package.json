@@ -1,0 +1,14 @@
+{
+  "name": "shopify-migrator",
+  "version": "1.0.0",
+  "description": "WooCommerce → Shopify catalog migration tool",
+  "type": "module",
+  "main": "import.js",
+  "scripts": {
+    "import": "node import.js",
+    "export": "node export.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  }
+}
