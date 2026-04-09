@@ -166,6 +166,7 @@ function mapMetafields(metaData) {
 
   return metaData
     .filter((m) => !m.key.startsWith('_') && !skipKeys.has(m.key))
+    .filter((m) => m.value !== '' && m.value !== null && m.value !== undefined)
     .map((m) => ({
       namespace: 'woocommerce',
       key: m.key.replace(/[^a-zA-Z0-9_]/g, '_'),

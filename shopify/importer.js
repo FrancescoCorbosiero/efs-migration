@@ -23,8 +23,10 @@ export async function importProduct(productJson) {
     console.log(`[import] Linked ${variantImageUpdates.length} variant image(s).`);
   }
 
-  // 2. Create metafields
-  const metafields = productJson.metafields || [];
+  // 2. Create metafields (skip empty values — Shopify rejects them)
+  const metafields = (productJson.metafields || []).filter(
+    (mf) => mf.value !== '' && mf.value !== null && mf.value !== undefined
+  );
   for (const mf of metafields) {
     console.log(`[import] Creating metafield ${mf.namespace}.${mf.key}…`);
     await request('POST', `/products/${product.id}/metafields.json`, {
