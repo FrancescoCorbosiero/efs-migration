@@ -155,18 +155,20 @@ function mapSimpleVariant(wooProduct, weightUnit) {
 }
 
 function mapMetafields(metaData) {
-  // Only export meta keys that look like real product data.
-  // WooCommerce meta_data is full of plugin junk (OptinMonster, UUID-keyed
-  // entries, campaign toggles, etc.) — none of it is useful in Shopify.
-  // Add meaningful keys here if your catalog has custom product fields.
-  const allowKeys = new Set([
-    // Example: 'fabric_composition', 'country_of_origin'
+  // Skip internal WooCommerce/WordPress meta (keys starting with _),
+  // known SEO plugin keys (handled separately in extractSeo), and
+  // keys that look like UUIDs (plugin-generated junk)
+  const skipKeys = new Set([
+    'rank_math_title',
+    'rank_math_description',
+    '_yoast_wpseo_title',
+    '_yoast_wpseo_metadesc',
   ]);
 
-  if (allowKeys.size === 0) return [];
+  const isUuid = (key) => /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(key);
 
   return metaData
-    .filter((m) => allowKeys.has(m.key))
+    .filter((m) => !m.key.startsWith('_') && !skipKeys.has(m.key) && !isUuid(m.key))
     .filter((m) => m.value !== '' && m.value !== null && m.value !== undefined)
     .map((m) => ({
       namespace: 'woocommerce',
