@@ -16,6 +16,9 @@ dist/
 output/
 *.tmp
 
+# Menu manager: local menu dumps should not be committed
+menus.json
+
 # OS
 .DS_Store
 Thumbs.db
