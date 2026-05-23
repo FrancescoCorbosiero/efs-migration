@@ -2,22 +2,31 @@
  * Map a WooCommerce product (+ its fetched variations) to the internal JSON model.
  *
  * WooCommerce taxonomy mapping:
- *   - categories   → collections (array of names) + product_type (primary category)
- *   - tags         → tags (array of names)
+ *   - brand        → vendor (priority: WC Brands → attribute → meta_data)
+ *   - categories   → collections (deduped, generics filtered) + product_type (deepest)
+ *   - tags         → tags
  *   - attributes   → options (for variable products)
  *
  * Note: Shopify's standardized product taxonomy (product_category) uses predefined
  * Shopify taxonomy IDs with no 1:1 mapping from WooCommerce. That classification
  * is a separate post-migration step if needed.
  */
-export function mapWooProduct(wooProduct, wooVariations = [], weightUnit = 'kg') {
+export function mapWooProduct(wooProduct, wooVariations = [], options = {}) {
+  const {
+    weightUnit = 'kg',
+    categoryMap = null,
+    shopName = '',
+  } = options;
+
+  const taxonomy = resolveTaxonomy(wooProduct, categoryMap);
+
   const product = {
     title: wooProduct.name || '',
     slug: wooProduct.slug || '',
     description_html: wooProduct.description || '',
     short_description: wooProduct.short_description || '',
-    vendor: extractVendor(wooProduct),
-    product_type: extractProductType(wooProduct),
+    vendor: extractVendor(wooProduct, shopName),
+    product_type: taxonomy.productType,
     tags: (wooProduct.tags || []).map((t) => t.name),
     status: wooProduct.status === 'publish' ? 'active' : 'draft',
     seo: extractSeo(wooProduct),
@@ -25,7 +34,7 @@ export function mapWooProduct(wooProduct, wooVariations = [], weightUnit = 'kg')
     options: [],
     variants: [],
     metafields: mapMetafields(wooProduct.meta_data || []),
-    collections: (wooProduct.categories || []).map((c) => c.name),
+    collections: taxonomy.collections,
   };
 
   if (wooProduct.type === 'variable' && wooVariations.length > 0) {
@@ -39,29 +48,153 @@ export function mapWooProduct(wooProduct, wooVariations = [], weightUnit = 'kg')
   return product;
 }
 
-// --- Helpers ---
+// --- Brand / vendor ---
 
-function extractVendor(wooProduct) {
-  // Check attributes for "Brand" or "Vendor"
+// Attribute names (and slugs) that commonly hold the manufacturer/brand.
+// Covers English plus the most common European translations and the
+// WooCommerce attribute slug prefix (`pa_`).
+const BRAND_ATTR_PATTERNS = [
+  /^brand$/i,
+  /^brands$/i,
+  /^vendor$/i,
+  /^manufacturer$/i,
+  /^marca$/i,         // it/es/pt
+  /^marque$/i,        // fr
+  /^marke$/i,         // de
+  /^hersteller$/i,    // de (manufacturer)
+  /^produttore$/i,    // it (manufacturer)
+  /^fabricante$/i,    // es/pt
+  /^fabricant$/i,     // fr
+  /^pa_brand$/i,
+  /^pa_brands$/i,
+  /^pa_marca$/i,
+  /^pa_manufacturer$/i,
+];
+
+// meta_data keys used by common WooCommerce brand plugins, plus the
+// generic conventions. Leading "_" (WC private meta) is optional.
+const BRAND_META_PATTERNS = [
+  /^_?brand$/i,
+  /^_?product_brand$/i,
+  /^_?vendor$/i,
+  /^_?manufacturer$/i,
+  /^_?marca$/i,
+  /^_?pwb_brand/i,      // Perfect Brands for WooCommerce
+  /^_?yith_brand/i,     // YITH WooCommerce Brands
+  /^_?wpc_brand/i,      // WPClever Brands
+];
+
+function extractVendor(wooProduct, shopName) {
+  const clean = (raw) => {
+    if (raw === null || raw === undefined) return null;
+    if (typeof raw === 'object') return null;
+    const trimmed = String(raw).trim();
+    if (!trimmed) return null;
+    if (shopName && trimmed.toLowerCase() === shopName.toLowerCase()) return null;
+    return trimmed;
+  };
+
+  // 1. WC Brands (merged into WooCommerce core in 9.4+). Product objects
+  //    include a `brands` array shaped like categories/tags.
+  for (const b of wooProduct.brands || []) {
+    const v = clean(b?.name);
+    if (v) return v;
+  }
+
+  // 2. Product attributes — broadened name + slug matching.
   for (const attr of wooProduct.attributes || []) {
-    if (/^(brand|vendor)$/i.test(attr.name)) {
-      return attr.options?.[0] || '';
+    if (!isBrandAttribute(attr)) continue;
+    for (const option of attr.options || []) {
+      const v = clean(option);
+      if (v) return v;
     }
   }
-  // Check meta_data for common brand plugins
+
+  // 3. meta_data — covers third-party brand plugins.
   for (const meta of wooProduct.meta_data || []) {
-    if (/^(_brand|brand|vendor)$/i.test(meta.key)) {
-      return String(meta.value);
-    }
+    if (!isBrandMeta(meta)) continue;
+    const v = clean(meta.value);
+    if (v) return v;
   }
+
   return '';
 }
 
-function extractProductType(wooProduct) {
-  const categories = wooProduct.categories || [];
-  // Use the last (deepest/most specific) category as product_type
-  return categories.length > 0 ? categories[categories.length - 1].name : '';
+function isBrandAttribute(attr) {
+  const candidates = [attr?.name, attr?.slug].filter(Boolean);
+  return candidates.some((c) =>
+    BRAND_ATTR_PATTERNS.some((re) => re.test(c))
+  );
 }
+
+function isBrandMeta(meta) {
+  if (!meta?.key) return false;
+  return BRAND_META_PATTERNS.some((re) => re.test(meta.key));
+}
+
+// --- Taxonomy: collections + product_type ---
+
+// Categories that exist in nearly every WooCommerce store but carry no
+// merchandising meaning — they shouldn't become Shopify collections and
+// shouldn't win the product_type lottery.
+const GENERIC_CATEGORY_NAMES = new Set([
+  'uncategorized',
+  'uncategorised',
+  'senza categoria',     // it
+  'sin categoría',       // es
+  'sans catégorie',      // fr
+  'nicht kategorisiert', // de
+  'general',
+  'all',
+  'all products',
+  'shop',
+  'home',
+  'featured',
+]);
+
+function isGenericCategory(name) {
+  if (!name) return true;
+  return GENERIC_CATEGORY_NAMES.has(String(name).trim().toLowerCase());
+}
+
+function resolveTaxonomy(wooProduct, categoryMap) {
+  const raw = (wooProduct.categories || []).filter(
+    (c) => !isGenericCategory(c.name)
+  );
+
+  // Collections: dedupe by name, preserve first-seen order.
+  const seen = new Set();
+  const collections = [];
+  for (const c of raw) {
+    const name = c.name?.trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    collections.push(name);
+  }
+
+  // product_type: prefer the deepest category by hierarchy depth. Without
+  // a category map we can only fall back to the array's last entry (the
+  // WooCommerce API does not guarantee hierarchical order, so this is a
+  // best-effort fallback).
+  let productType = '';
+  if (raw.length > 0) {
+    if (categoryMap) {
+      const ranked = raw
+        .map((c) => ({
+          name: c.name,
+          depth: categoryMap.get(c.id)?.depth ?? 0,
+        }))
+        .sort((a, b) => b.depth - a.depth);
+      productType = ranked[0]?.name || '';
+    } else {
+      productType = raw[raw.length - 1].name;
+    }
+  }
+
+  return { productType, collections };
+}
+
+// --- SEO ---
 
 function extractSeo(wooProduct) {
   const seo = { title: '', description: '' };
@@ -89,6 +222,8 @@ function extractSeo(wooProduct) {
 function stripHtml(html) {
   return html.replace(/<[^>]*>/g, '').trim();
 }
+
+// --- Images / options / variants ---
 
 function mapImages(wooImages) {
   return wooImages.map((img) => ({
@@ -153,6 +288,8 @@ function mapSimpleVariant(wooProduct, weightUnit) {
     image_src: '',
   };
 }
+
+// --- Metafields ---
 
 function mapMetafields(metaData) {
   // Only export meta keys that look like real product data.

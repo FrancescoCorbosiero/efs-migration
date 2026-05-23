@@ -20,6 +20,11 @@ const config = {
     baseUrl: process.env.WOO_BASE_URL,
     consumerKey: process.env.WOO_CONSUMER_KEY,
     consumerSecret: process.env.WOO_CONSUMER_SECRET,
+    // Optional: shop name to reject as a vendor value. Some WooCommerce
+    // stores set the "Brand" attribute to the shop's own name on every
+    // product; when set, the mapper will discard that value and fall back
+    // to the next brand source.
+    shopName: process.env.WOO_SHOP_NAME || '',
   },
   validateShopify() {
     validateRequired(

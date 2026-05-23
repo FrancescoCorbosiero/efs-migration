@@ -65,9 +65,13 @@ The shared contract between the exporter and importer. Key fields:
 
 ### Taxonomy Mapping
 WooCommerce and Shopify handle taxonomy differently:
-- **WooCommerce categories** → `collections` (all category names) + `product_type` (deepest/most specific category)
+- **WooCommerce categories** → `collections` (deduped, generic categories like "Uncategorized" filtered out) + `product_type` (deepest category by hierarchy depth, resolved via a pre-fetched id → depth map)
 - **WooCommerce tags** → `tags`
-- **WooCommerce "Brand" attribute** → `vendor`
+- **WooCommerce brand** → `vendor`, resolved in priority order:
+  1. `wooProduct.brands[]` — WC Brands plugin (merged into WooCommerce core in 9.4+)
+  2. Product attributes matching `brand`/`vendor`/`manufacturer` or localized equivalents (`marca`, `marque`, `marke`, `produttore`, `hersteller`, `fabricant`, …), including the `pa_` slug variants
+  3. `meta_data` keys for common brand plugins (`_brand`, `product_brand`, `pwb_brand*`, `yith_brand*`, `wpc_brand*`, …)
+  - Values matching the configured `WOO_SHOP_NAME` (case-insensitive) are rejected at every step so the shop's own name can't leak in as a brand
 - **Shopify standardized product taxonomy** (`product_category`) uses Shopify's predefined taxonomy IDs — there is no automatic 1:1 mapping from WooCommerce categories. This classification is a post-migration step if needed.
 - **Media/images**: Shopify auto-downloads images from source URLs during product creation. WooCommerce image URLs just need to be publicly accessible at import time.
 
@@ -84,6 +88,7 @@ WooCommerce and Shopify handle taxonomy differently:
 | `WOO_BASE_URL` | e.g. `https://my-wp-site.com` | export |
 | `WOO_CONSUMER_KEY` | `ck_...` | export |
 | `WOO_CONSUMER_SECRET` | `cs_...` | export |
+| `WOO_SHOP_NAME` | optional — shop's own name to reject as a `vendor` value (e.g. `EternalFishingShop`) | export |
 
 ---
 

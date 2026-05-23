@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import config from '../config.js';
 import { request } from './client.js';
 import { mapWooProduct } from './mappers.js';
 
@@ -40,6 +41,48 @@ async function fetchWeightUnit() {
 }
 
 /**
+ * Fetch all product categories once and return a map keyed by id with
+ * computed depth (root categories have depth 0). Used by the mapper to
+ * pick the deepest category as `product_type` instead of relying on the
+ * order the WooCommerce REST API happens to return them in.
+ */
+async function fetchCategoryMap() {
+  const categories = [];
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages) {
+    const res = await request('GET', '/products/categories', {
+      per_page: PER_PAGE,
+      page,
+    });
+    categories.push(...res.data);
+    totalPages = res.totalPages;
+    page++;
+  }
+
+  const map = new Map();
+  for (const c of categories) {
+    map.set(c.id, { id: c.id, name: c.name, slug: c.slug, parent: c.parent || 0 });
+  }
+
+  // Resolve depth by walking parent links. Guard against cycles.
+  for (const node of map.values()) {
+    let depth = 0;
+    let cur = node;
+    const visited = new Set();
+    while (cur.parent && map.has(cur.parent) && !visited.has(cur.id)) {
+      visited.add(cur.id);
+      depth++;
+      cur = map.get(cur.parent);
+    }
+    node.depth = depth;
+  }
+
+  return map;
+}
+
+/**
  * Export all products from WooCommerce, map to internal JSON model,
  * and save each as a JSON file in the output directory.
  *
@@ -50,6 +93,14 @@ export async function exportAllProducts(outputDir = 'output') {
 
   const weightUnit = await fetchWeightUnit();
   console.log(`[export] Weight unit: ${weightUnit}`);
+
+  const categoryMap = await fetchCategoryMap();
+  console.log(`[export] Loaded ${categoryMap.size} categories.`);
+
+  const shopName = config.woo.shopName;
+  if (shopName) {
+    console.log(`[export] Vendor blacklist: "${shopName}" will be rejected as a brand value.`);
+  }
 
   let page = 1;
   let totalPages = 1;
@@ -71,12 +122,16 @@ export async function exportAllProducts(outputDir = 'output') {
         console.log(`[export]   Found ${variations.length} variation(s).`);
       }
 
-      const mapped = mapWooProduct(wooProduct, variations, weightUnit);
+      const mapped = mapWooProduct(wooProduct, variations, {
+        weightUnit,
+        categoryMap,
+        shopName,
+      });
       const filename = `${mapped.slug || `product-${wooProduct.id}`}.json`;
       const filePath = join(outputDir, filename);
 
       await writeFile(filePath, JSON.stringify(mapped, null, 2) + '\n');
-      console.log(`[export]   Saved: ${filePath} (${mapped.variants.length} variants)`);
+      console.log(`[export]   Saved: ${filePath} (${mapped.variants.length} variants, vendor="${mapped.vendor}", product_type="${mapped.product_type}")`);
 
       results.push({
         slug: mapped.slug,
