@@ -18,14 +18,14 @@ export function mapWooProduct(wooProduct, wooVariations = [], options = {}) {
     shopName = '',
   } = options;
 
-  const taxonomy = resolveTaxonomy(wooProduct, categoryMap);
+  const taxonomy = resolveTaxonomy(wooProduct, categoryMap, shopName);
 
   const product = {
     title: wooProduct.name || '',
     slug: wooProduct.slug || '',
     description_html: wooProduct.description || '',
     short_description: wooProduct.short_description || '',
-    vendor: extractVendor(wooProduct, shopName),
+    vendor: extractVendor(wooProduct, shopName, taxonomy.brandFromCategory),
     product_type: taxonomy.productType,
     tags: (wooProduct.tags || []).map((t) => t.name),
     status: wooProduct.status === 'publish' ? 'active' : 'draft',
@@ -84,7 +84,7 @@ const BRAND_META_PATTERNS = [
   /^_?wpc_brand/i,      // WPClever Brands
 ];
 
-function extractVendor(wooProduct, shopName) {
+function extractVendor(wooProduct, shopName, brandFromCategory = '') {
   const clean = (raw) => {
     if (raw === null || raw === undefined) return null;
     if (typeof raw === 'object') return null;
@@ -101,7 +101,14 @@ function extractVendor(wooProduct, shopName) {
     if (v) return v;
   }
 
-  // 2. Product attributes — broadened name + slug matching.
+  // 2. Category-as-brand: many WooCommerce stores model brands as child
+  //    categories under a "Marche"/"Brands"/"Marcas" parent (URL pattern
+  //    /product-category/marche/<brand>/). Resolved upstream in
+  //    resolveTaxonomy() using the category hierarchy map.
+  const fromCategory = clean(brandFromCategory);
+  if (fromCategory) return fromCategory;
+
+  // 3. Product attributes — broadened name + slug matching.
   for (const attr of wooProduct.attributes || []) {
     if (!isBrandAttribute(attr)) continue;
     for (const option of attr.options || []) {
@@ -110,7 +117,7 @@ function extractVendor(wooProduct, shopName) {
     }
   }
 
-  // 3. meta_data — covers third-party brand plugins.
+  // 4. meta_data — covers third-party brand plugins.
   for (const meta of wooProduct.meta_data || []) {
     if (!isBrandMeta(meta)) continue;
     const v = clean(meta.value);
@@ -157,15 +164,83 @@ function isGenericCategory(name) {
   return GENERIC_CATEGORY_NAMES.has(String(name).trim().toLowerCase());
 }
 
-function resolveTaxonomy(wooProduct, categoryMap) {
+// Parent categories whose children represent brands rather than product
+// types. Match by slug or name in any of the common languages. Stores
+// using this pattern have URLs like /product-category/marche/<brand>/.
+const BRAND_PARENT_TOKENS = new Set([
+  'marche', 'marca',         // it
+  'brands', 'brand',         // en
+  'marcas',                  // es/pt
+  'marques', 'marque',       // fr
+  'marken', 'marke',         // de
+  'manufacturers', 'manufacturer',
+]);
+
+function isBrandParentCategory(node) {
+  if (!node) return false;
+  const slug = String(node.slug || '').trim().toLowerCase();
+  const name = String(node.name || '').trim().toLowerCase();
+  return BRAND_PARENT_TOKENS.has(slug) || BRAND_PARENT_TOKENS.has(name);
+}
+
+// Walks the parent chain for a given category id. Returns true if any
+// ancestor is a brand-parent. The category itself does not count — only
+// its ancestors — so the parent ("Marche") is not treated as a brand.
+function isUnderBrandParent(catId, categoryMap) {
+  if (!categoryMap) return false;
+  const start = categoryMap.get(catId);
+  if (!start) return false;
+  let cur = start;
+  const visited = new Set();
+  while (cur.parent && categoryMap.has(cur.parent) && !visited.has(cur.id)) {
+    visited.add(cur.id);
+    const parent = categoryMap.get(cur.parent);
+    if (isBrandParentCategory(parent)) return true;
+    cur = parent;
+  }
+  return false;
+}
+
+function resolveTaxonomy(wooProduct, categoryMap, shopName = '') {
   const raw = (wooProduct.categories || []).filter(
     (c) => !isGenericCategory(c.name)
   );
 
+  // First pass: separate brand-tree categories from product-type categories.
+  // Brand-tree includes the brand-parent itself ("Marche") and its
+  // descendants (e.g. "Anaconda"). The deepest descendant wins as brand,
+  // so /Marche/European/Anaconda picks "Anaconda" rather than "European".
+  let brandName = '';
+  let brandDepth = -1;
+  const productCategories = [];
+
+  for (const c of raw) {
+    const node = categoryMap ? categoryMap.get(c.id) : null;
+
+    if (node && isBrandParentCategory(node)) {
+      // The brand-parent itself ("Marche") — drop it entirely.
+      continue;
+    }
+
+    if (node && isUnderBrandParent(c.id, categoryMap)) {
+      const candidate = c.name?.trim() || '';
+      const depth = node.depth ?? 0;
+      const isShop =
+        shopName && candidate.toLowerCase() === shopName.toLowerCase();
+      if (candidate && !isShop && depth > brandDepth) {
+        brandName = candidate;
+        brandDepth = depth;
+      }
+      continue;
+    }
+
+    productCategories.push(c);
+  }
+
   // Collections: dedupe by name, preserve first-seen order.
   const seen = new Set();
   const collections = [];
-  for (const c of raw) {
+  for (const c of productCategories) {
     const name = c.name?.trim();
     if (!name || seen.has(name)) continue;
     seen.add(name);
@@ -177,9 +252,9 @@ function resolveTaxonomy(wooProduct, categoryMap) {
   // WooCommerce API does not guarantee hierarchical order, so this is a
   // best-effort fallback).
   let productType = '';
-  if (raw.length > 0) {
+  if (productCategories.length > 0) {
     if (categoryMap) {
-      const ranked = raw
+      const ranked = productCategories
         .map((c) => ({
           name: c.name,
           depth: categoryMap.get(c.id)?.depth ?? 0,
@@ -187,11 +262,11 @@ function resolveTaxonomy(wooProduct, categoryMap) {
         .sort((a, b) => b.depth - a.depth);
       productType = ranked[0]?.name || '';
     } else {
-      productType = raw[raw.length - 1].name;
+      productType = productCategories[productCategories.length - 1].name;
     }
   }
 
-  return { productType, collections };
+  return { productType, collections, brandFromCategory: brandName };
 }
 
 // --- SEO ---
