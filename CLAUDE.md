@@ -69,8 +69,9 @@ WooCommerce and Shopify handle taxonomy differently:
 - **WooCommerce tags** → `tags`
 - **WooCommerce brand** → `vendor`, resolved in priority order:
   1. `wooProduct.brands[]` — WC Brands plugin (merged into WooCommerce core in 9.4+)
-  2. Product attributes matching `brand`/`vendor`/`manufacturer` or localized equivalents (`marca`, `marque`, `marke`, `produttore`, `hersteller`, `fabricant`, …), including the `pa_` slug variants
-  3. `meta_data` keys for common brand plugins (`_brand`, `product_brand`, `pwb_brand*`, `yith_brand*`, `wpc_brand*`, …)
+  2. **Category-as-brand**: child categories under a brand-parent category (slug or name matching `marche`/`marca`, `brands`/`brand`, `marcas`, `marques`/`marque`, `marken`/`marke`, `manufacturers`/`manufacturer`). Detected via the pre-fetched category hierarchy map. The brand-parent itself and its descendants are excluded from `collections` and from `product_type` resolution.
+  3. Product attributes matching `brand`/`vendor`/`manufacturer` or localized equivalents (`marca`, `marque`, `marke`, `produttore`, `hersteller`, `fabricant`, …), including the `pa_` slug variants
+  4. `meta_data` keys for common brand plugins (`_brand`, `product_brand`, `pwb_brand*`, `yith_brand*`, `wpc_brand*`, …)
   - Values matching the configured `WOO_SHOP_NAME` (case-insensitive) are rejected at every step so the shop's own name can't leak in as a brand
 - **Shopify standardized product taxonomy** (`product_category`) uses Shopify's predefined taxonomy IDs — there is no automatic 1:1 mapping from WooCommerce categories. This classification is a post-migration step if needed.
 - **Media/images**: Shopify auto-downloads images from source URLs during product creation. WooCommerce image URLs just need to be publicly accessible at import time.
