@@ -64,14 +64,20 @@ The shared contract between the exporter and importer. Key fields:
 ```
 
 ### Taxonomy Mapping
-WooCommerce and Shopify handle taxonomy differently:
-- **WooCommerce categories** → `collections` (deduped, generic categories like "Uncategorized" filtered out) + `product_type` (deepest category by hierarchy depth, resolved via a pre-fetched id → depth map)
+WooCommerce and Shopify handle taxonomy differently. Many WooCommerce stores (especially small/migrated ones) dump brands, fishing/use-case tags, and product types into a single flat `categories[]` per product with no parent structure. To untangle that, the exporter consumes two curated allowlists from `config/`:
+
+- `config/brands.json` — authoritative brand allowlist. Any category name that matches an entry (case-insensitive, curly-apostrophe normalized) is treated as the vendor and stripped from collections/product_type.
+- `config/fishing-types.json` — cross-cutting use-case tags ("Carpfishing", "Catfishing", "Mare", …). Kept in collections (still navigable) but excluded from product_type ranking so a fishing style doesn't outrank a real product category.
+
+Mapping rules:
+- **WooCommerce categories** → `collections` (minus brand matches and generics like "Uncategorized") + `product_type` (deepest non-brand non-fishing-type category by hierarchy depth, resolved via a pre-fetched id → depth map)
 - **WooCommerce tags** → `tags`
 - **WooCommerce brand** → `vendor`, resolved in priority order:
-  1. `wooProduct.brands[]` — WC Brands plugin (merged into WooCommerce core in 9.4+)
-  2. **Category-as-brand**: child categories under a brand-parent category (slug or name matching `marche`/`marca`, `brands`/`brand`, `marcas`, `marques`/`marque`, `marken`/`marke`, `manufacturers`/`manufacturer`). Detected via the pre-fetched category hierarchy map. The brand-parent itself and its descendants are excluded from `collections` and from `product_type` resolution.
-  3. Product attributes matching `brand`/`vendor`/`manufacturer` or localized equivalents (`marca`, `marque`, `marke`, `produttore`, `hersteller`, `fabricant`, …), including the `pa_` slug variants
-  4. `meta_data` keys for common brand plugins (`_brand`, `product_brand`, `pwb_brand*`, `yith_brand*`, `wpc_brand*`, …)
+  1. **Category match against `config/brands.json`** — the canonical signal for stores that mix brands into product categories
+  2. `wooProduct.brands[]` — WC Brands plugin (merged into WooCommerce core in 9.4+)
+  3. **Category-tree match**: descendants of a brand-parent category (slug or name matching `marche`/`marca`, `brands`/`brand`, `marcas`, `marques`/`marque`, `marken`/`marke`, `manufacturers`/`manufacturer`)
+  4. Product attributes matching `brand`/`vendor`/`manufacturer` or localized equivalents (`marca`, `marque`, `marke`, `produttore`, `hersteller`, `fabricant`, …), including the `pa_` slug variants
+  5. `meta_data` keys for common brand plugins (`_brand`, `product_brand`, `pwb_brand*`, `yith_brand*`, `wpc_brand*`, …)
   - Values matching the configured `WOO_SHOP_NAME` (case-insensitive) are rejected at every step so the shop's own name can't leak in as a brand
 - **Shopify standardized product taxonomy** (`product_category`) uses Shopify's predefined taxonomy IDs — there is no automatic 1:1 mapping from WooCommerce categories. This classification is a post-migration step if needed.
 - **Media/images**: Shopify auto-downloads images from source URLs during product creation. WooCommerce image URLs just need to be publicly accessible at import time.

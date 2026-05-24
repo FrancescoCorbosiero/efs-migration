@@ -1,24 +1,44 @@
 /**
  * Map a WooCommerce product (+ its fetched variations) to the internal JSON model.
  *
- * WooCommerce taxonomy mapping:
- *   - brand        → vendor (priority: WC Brands → attribute → meta_data)
- *   - categories   → collections (deduped, generics filtered) + product_type (deepest)
- *   - tags         → tags
- *   - attributes   → options (for variable products)
+ * WooCommerce taxonomy mapping (priority order for vendor):
+ *   1. Brand allowlist match against `categories[]` (authoritative when the
+ *      store mixes brands into product categories — the typical case for
+ *      stores without a brand plugin or attribute).
+ *   2. `wooProduct.brands[]` (WC Brands plugin, core 9.4+).
+ *   3. Category-tree match: descendants of a "Marche"/"Brands" parent.
+ *   4. Product attributes (Brand/Marca/Produttore/…).
+ *   5. `meta_data` keys for common brand plugins.
  *
- * Note: Shopify's standardized product taxonomy (product_category) uses predefined
- * Shopify taxonomy IDs with no 1:1 mapping from WooCommerce. That classification
- * is a separate post-migration step if needed.
+ * Other axes:
+ *   - categories minus brand matches → collections (deduped, generics filtered)
+ *   - deepest non-brand non-fishing-type category → product_type
+ *   - fishing-type matches stay in collections but never become product_type
+ *   - tags pass through
+ *
+ * Note: Shopify's standardized product taxonomy (product_category) uses
+ * predefined Shopify taxonomy IDs with no 1:1 mapping from WooCommerce.
+ * That classification is a separate post-migration step if needed.
  */
 export function mapWooProduct(wooProduct, wooVariations = [], options = {}) {
   const {
     weightUnit = 'kg',
     categoryMap = null,
     shopName = '',
+    brands = [],
+    fishingTypes = [],
   } = options;
 
-  const taxonomy = resolveTaxonomy(wooProduct, categoryMap, shopName);
+  const brandSet = toNormalizedSet(brands);
+  const fishingTypeSet = toNormalizedSet(fishingTypes);
+
+  const taxonomy = resolveTaxonomy(
+    wooProduct,
+    categoryMap,
+    shopName,
+    brandSet,
+    fishingTypeSet
+  );
 
   const product = {
     title: wooProduct.name || '',
@@ -46,6 +66,29 @@ export function mapWooProduct(wooProduct, wooVariations = [], options = {}) {
   }
 
   return product;
+}
+
+// --- Normalization helpers ---
+
+// Canonical form for comparing brand / category names across the user's
+// allowlist and the strings that appear on WooCommerce products.
+// Lowercases, collapses whitespace, and normalizes curly apostrophes to
+// straight ones (so "Atlas Mike's" matches "Atlas Mike's").
+function normalize(s) {
+  return String(s ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[‘’]/g, "'")
+    .replace(/\s+/g, ' ');
+}
+
+function toNormalizedSet(list) {
+  const out = new Set();
+  for (const item of list || []) {
+    const n = normalize(item);
+    if (n) out.add(n);
+  }
+  return out;
 }
 
 // --- Brand / vendor ---
@@ -201,46 +244,67 @@ function isUnderBrandParent(catId, categoryMap) {
   return false;
 }
 
-function resolveTaxonomy(wooProduct, categoryMap, shopName = '') {
+function resolveTaxonomy(
+  wooProduct,
+  categoryMap,
+  shopName = '',
+  brandSet = new Set(),
+  fishingTypeSet = new Set()
+) {
+  const shopNorm = normalize(shopName);
   const raw = (wooProduct.categories || []).filter(
     (c) => !isGenericCategory(c.name)
   );
 
-  // First pass: separate brand-tree categories from product-type categories.
-  // Brand-tree includes the brand-parent itself ("Marche") and its
-  // descendants (e.g. "Anaconda"). The deepest descendant wins as brand,
-  // so /Marche/European/Anaconda picks "Anaconda" rather than "European".
+  // Partition each category. Three priority signals can identify a brand:
+  //   (a) name matches an entry in the brand allowlist
+  //   (b) name lives under a "Marche"/"Brands" parent in the category tree
+  // The allowlist wins when both fire. For (a) we take the first match in
+  // category order; for (b) we take the deepest descendant in the tree.
   let brandName = '';
-  let brandDepth = -1;
+  let brandTreeDepth = -1;
   const productCategories = [];
+  const collectionsRaw = [];
 
   for (const c of raw) {
+    const name = c.name?.trim() || '';
+    if (!name) continue;
+    const norm = normalize(name);
     const node = categoryMap ? categoryMap.get(c.id) : null;
 
+    // (1) Brand allowlist — top priority.
+    if (brandSet.has(norm)) {
+      if (!brandName && norm !== shopNorm) brandName = name;
+      continue; // drop from collections/product_type entirely
+    }
+
+    // (2) Brand-parent itself ("Marche") — drop without claiming as a brand.
     if (node && isBrandParentCategory(node)) {
-      // The brand-parent itself ("Marche") — drop it entirely.
       continue;
     }
 
+    // (3) Brand-tree descendant — claim as brand if no allowlist match yet.
     if (node && isUnderBrandParent(c.id, categoryMap)) {
-      const candidate = c.name?.trim() || '';
       const depth = node.depth ?? 0;
-      const isShop =
-        shopName && candidate.toLowerCase() === shopName.toLowerCase();
-      if (candidate && !isShop && depth > brandDepth) {
-        brandName = candidate;
-        brandDepth = depth;
+      if (!brandSet.size && norm !== shopNorm && depth > brandTreeDepth) {
+        brandName = name;
+        brandTreeDepth = depth;
       }
       continue;
     }
 
-    productCategories.push(c);
+    // Everything else stays in collections. Fishing types are excluded
+    // from product_type ranking but remain navigable.
+    collectionsRaw.push(c);
+    if (!fishingTypeSet.has(norm)) {
+      productCategories.push(c);
+    }
   }
 
   // Collections: dedupe by name, preserve first-seen order.
   const seen = new Set();
   const collections = [];
-  for (const c of productCategories) {
+  for (const c of collectionsRaw) {
     const name = c.name?.trim();
     if (!name || seen.has(name)) continue;
     seen.add(name);
