@@ -102,6 +102,11 @@ export async function exportAllProducts(outputDir = 'output') {
     console.log(`[export] Vendor blacklist: "${shopName}" will be rejected as a brand value.`);
   }
 
+  const brands = config.woo.brands || [];
+  const fishingTypes = config.woo.fishingTypes || [];
+  console.log(`[export] Brand allowlist: ${brands.length} entries.`);
+  console.log(`[export] Fishing-type allowlist: ${fishingTypes.length} entries.`);
+
   let page = 1;
   let totalPages = 1;
   let totalProducts = 0;
@@ -126,6 +131,8 @@ export async function exportAllProducts(outputDir = 'output') {
         weightUnit,
         categoryMap,
         shopName,
+        brands,
+        fishingTypes,
       });
       const filename = `${mapped.slug || `product-${wooProduct.id}`}.json`;
       const filePath = join(outputDir, filename);
